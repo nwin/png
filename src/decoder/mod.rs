@@ -149,18 +149,25 @@ impl<R: Read> Decoder<R> {
     /// Note that this is a best-effort basis.
     ///
     /// ```
+    /// use std::path::PathBuf;
     /// use std::fs::File;
     /// use png::{Decoder, Limits};
     /// // This image is 32×32, 1bit per pixel. The reader buffers one row which requires 4 bytes.
+    /// let path = PathBuf::from("tests/pngsuite/basi0g01.png");
+    /// # let mut path = path;
+    /// # xtest_data::setup!().rewrite([&mut path]).build();
     /// let mut limits = Limits::default();
     /// limits.bytes = 3;
-    /// let mut decoder = Decoder::new_with_limits(File::open("tests/pngsuite/basi0g01.png").unwrap(), limits);
+    /// let mut decoder = Decoder::new_with_limits(File::open(path).unwrap(), limits);
     /// assert!(decoder.read_info().is_err());
     ///
     /// // This image is 32x32 pixels, so the decoder will allocate less than 10Kib
+    /// let path = PathBuf::from("tests/pngsuite/basi0g01.png");
+    /// # let mut path = path;
+    /// # xtest_data::setup!().rewrite([&mut path]).build();
     /// let mut limits = Limits::default();
     /// limits.bytes = 10*1024;
-    /// let mut decoder = Decoder::new_with_limits(File::open("tests/pngsuite/basi0g01.png").unwrap(), limits);
+    /// let mut decoder = Decoder::new_with_limits(File::open(path).unwrap(), limits);
     /// assert!(decoder.read_info().is_ok());
     /// ```
     pub fn set_limits(&mut self, limits: Limits) {
@@ -954,17 +961,17 @@ mod tests {
 
     #[test]
     fn no_data_dup_on_finish() {
-        const IMG: &[u8] = include_bytes!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/tests/bugfixes/x_issue#214.png"
-        ));
+        let mut path = std::path::PathBuf::from("tests/bugfixes/x_issue#214.png");
+        xtest_data::setup!().rewrite([&mut path]).build();
+        let img: Vec<u8> = std::fs::read(path).expect("reading issue file data");
+        let img = img.as_slice();
 
-        let mut normal = Decoder::new(IMG).read_info().unwrap();
+        let mut normal = Decoder::new(img).read_info().unwrap();
 
         let mut buffer = vec![0; normal.output_buffer_size()];
         let normal = normal.next_frame(&mut buffer).unwrap_err();
 
-        let smal = Decoder::new(SmalBuf::new(IMG, 1))
+        let smal = Decoder::new(SmalBuf::new(img, 1))
             .read_info()
             .unwrap()
             .next_frame(&mut buffer)

@@ -1608,19 +1608,24 @@ mod tests {
     use std::io::{Cursor, Write};
     use std::{cmp, io};
 
+    fn setup_pngsuite() -> impl std::ops::Deref<Target = std::path::Path> {
+        let mut path = std::path::PathBuf::from("tests/pngsuite");
+        xtest_data::setup!().rewrite([&mut path]).build();
+        path
+    }
+
     #[test]
     fn roundtrip() {
+        let base = setup_pngsuite();
         // More loops = more random testing, but also more test wait time
         for _ in 0..10 {
-            for path in glob::glob("tests/pngsuite/*.png")
-                .unwrap()
-                .map(|r| r.unwrap())
-            {
+            let glob = base.join("*.png").display().to_string();
+            for path in glob::glob(&glob).unwrap().map(|r| r.unwrap()) {
                 if path.file_name().unwrap().to_str().unwrap().starts_with('x') {
                     // x* files are expected to fail to decode
                     continue;
                 }
-                eprintln!("{}", path.display());
+                // eprintln!("{}", path.display());
                 // Decode image
                 let decoder = Decoder::new(File::open(path).unwrap());
                 let mut reader = decoder.read_info().unwrap();
@@ -1656,12 +1661,11 @@ mod tests {
 
     #[test]
     fn roundtrip_stream() {
+        let base = setup_pngsuite();
         // More loops = more random testing, but also more test wait time
         for _ in 0..10 {
-            for path in glob::glob("tests/pngsuite/*.png")
-                .unwrap()
-                .map(|r| r.unwrap())
-            {
+            let glob = base.join("*.png").display().to_string();
+            for path in glob::glob(&glob).unwrap().map(|r| r.unwrap()) {
                 if path.file_name().unwrap().to_str().unwrap().starts_with('x') {
                     // x* files are expected to fail to decode
                     continue;
@@ -1708,9 +1712,11 @@ mod tests {
 
     #[test]
     fn image_palette() -> Result<()> {
+        let pngsuite = setup_pngsuite();
         for &bit_depth in &[1u8, 2, 4, 8] {
+            eprintln!("Trying to palette encode {:?}", bit_depth);
             // Do a reference decoding, choose a fitting palette image from pngsuite
-            let path = format!("tests/pngsuite/basn3p0{}.png", bit_depth);
+            let path = pngsuite.join(&format!("basn3p0{}.png", bit_depth));
             let decoder = Decoder::new(File::open(&path).unwrap());
             let mut reader = decoder.read_info().unwrap();
 
